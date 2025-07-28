@@ -1,10 +1,13 @@
 package cn.chahuyun.teafox.game.game
 
+import cn.chahuyun.teafox.game.DZConfig
 import cn.chahuyun.teafox.game.GameEvent
 import cn.chahuyun.teafox.game.GameType
 import cn.chahuyun.teafox.game.Player
 import cn.chahuyun.teafox.game.game.BaghChalGameCore.MoveDirection.*
 import cn.chahuyun.teafox.game.game.BaghChalGameCore.PosStatue.*
+import cn.chahuyun.teafox.game.util.MessageUtil.nextGroupMessageEvent
+import cn.chahuyun.teafox.game.util.MessageUtil.nextMessage
 import net.mamoe.mirai.contact.Group
 
 /**
@@ -81,7 +84,7 @@ class BaghChalGameCore {
      * 游戏顺序
      * false:狼
      * true:羊*/
-    private var term: Boolean = false
+    private var term: Boolean = true
 
 
     /**
@@ -99,15 +102,14 @@ class BaghChalGameCore {
     fun fresh() {
         for (row in 0 until rowSize) {
             for (col in 0 until rowSize) {
-                if ((row == (rowSize - 1)) || (col == (rowSize - 1))) {
-                    vectorMap[row][col] = Wolf
-                } else {
-                    vectorMap[row][col] = Empty
-                }
+                vectorMap[row][col] = Empty
             }
         }
         vectorMap[0][0] = Wolf
-        term = false
+        vectorMap[0][rowSize - 1] = Wolf
+        vectorMap[rowSize - 1][0] = Wolf
+        vectorMap[rowSize - 1][rowSize - 1] = Wolf
+        term = true
         piecesLeft = 20
         piecesCaptured = 0
         winner = Empty
@@ -386,6 +388,33 @@ class BaghChalGameCore {
             println()
         }
     }
+
+    override fun toString(): String {
+        val sheep = "⛉"
+        val wolf = "⛊"
+        val empty = "⛌"
+        val sb = StringBuilder("""
+            --------------------------
+            sheep:${sheep} wolf:${wolf} empty:${empty}
+            当前${if(term) sheep else wolf}
+        """.trimIndent())
+        sb.append("\n 1  2  3  4  5\n")
+        for (row in 0 until  rowSize) {
+            sb.append(row+1)
+            for ((id,piece) in vectorMap[row].withIndex()) {
+                when (piece) {
+                    Empty -> sb.append(empty)
+                    Wolf -> sb.append(wolf)
+                    Sheep -> sb.append(sheep)
+                }
+                if (id < rowSize-1){
+                    sb.append(" ")
+                }
+            }
+            sb.append("\n")
+        }
+        return sb.toString()
+    }
 }
 
 class BaghChalGameCoreException(override val message: String?) : Exception(message)
@@ -393,15 +422,41 @@ class BaghChalGameCoreException(override val message: String?) : Exception(messa
 class BaghChalGame(override val group: Group,
                    override val players: List<Player>,
                    override val gameType: GameType) :GameTable{
+    val g = BaghChalGameCore()
+    init {
+        g.fresh()
+    }
+    var cp = players.random()
     /**
      * ->游戏开始
      * ->检查好友，开启禁言，发牌
      * ->进入轮询消息监听，开始对局
      */
-
     override suspend fun start() {
-        group.sendMessage("TODO:还没做好，敬请期待\n欸嘿？（歪头）")
-        GameEvent.cancelGame(group)
+        group.sendMessage("玩家发送指令 “sj” 随机执棋顺序")
+        while (true){
+            val ct = nextGroupMessageEvent(group, DZConfig.timeOut) ?: run {
+                group.sendMessage("等待玩家下一步超时，请超市该玩家，游戏结束")
+                GameEvent.cancelGame(group)
+                return // 如果超时则退出
+            }
+            var flag = false
+            for(player in players) {
+                if (player.id == ct.sender.id){
+                    flag = true
+                }
+            }
+            if (!flag) continue
+            val ctt = ct.message.contentToString()
+            if (ctt.matches(Regex("^sj$"))){
+                group.sendMessage("${cp.name} 扮演羊先行，${nextPlayer(cp).name} 扮演狼后行")
+                break
+            }else{
+                continue
+            }
+        }
+        initial()
+
     }
 
     /**
@@ -410,7 +465,36 @@ class BaghChalGame(override val group: Group,
      * ->决定地主，补牌
      */
     override suspend fun initial() {
-        TODO("Not yet implemented")
+        group.sendMessage(g.toString())
+        while (g.winner==Empty){
+            val cpMessage = cp.nextMessage(group, DZConfig.timeOut) ?: run {
+                group.sendMessage("等待玩家下一步超时，请超市该玩家，游戏结束")
+                GameEvent.cancelGame(group)
+                return // 如果超时则退出
+            }
+            val content = cpMessage.contentToString()
+            if (content.matches("^掀桌".toRegex())) {
+                group.sendMessage("掀桌(╯‵□′)╯︵┻━┻")
+                cancelGame()
+                return
+            }
+            if (content.matches("^[1-5]{4}\$".toRegex())){
+                try {
+                    val pos = getPosition(content)
+                    g.step(BaghChalGameCore.Point(pos[0]-1,pos[1]-1),
+                        BaghChalGameCore.Point(pos[2]-1,pos[3]-1))
+                    cp = nextPlayer(cp)
+                    group.sendMessage("${cp.name} 执棋\n"+g.toString())
+                } catch (e: BaghChalGameCoreException) {
+                    group.sendMessage(e.message.toString())
+                    continue
+                } catch (e: Exception){
+                    group.sendMessage("出错了，请重新输入")
+                }
+            }
+        }
+        group.sendMessage("胜利者：${g.winner}, 游戏结束")
+        GameEvent.cancelGame(group)
     }
 
     /**
@@ -429,4 +513,11 @@ class BaghChalGame(override val group: Group,
         TODO("Not yet implemented")
     }
 
+    private fun getPosition(content:String):ArrayList<Int>{
+        val a = ArrayList<Int>()
+        for (i in content){
+            a.add(i.toString().toInt())
+        }
+        return a
+    }
 }

@@ -58,7 +58,6 @@ class GameEvent {
         var ready:Boolean = false
         val players = mutableListOf(player)
         while (!ready){
-
             val messageEvent = nextGroupMessageEvent(group, DZConfig.timeOut) ?: run {
                 group.sendMessage("等待玩家加入超时，游戏未能开始(╯‵□′)╯︵┻━┻")
                 gameTables.remove(group.id)
