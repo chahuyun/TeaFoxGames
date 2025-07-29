@@ -43,6 +43,11 @@ data class FoxUser(
      */
     var landlordLose: Int? = null,
 
+    /**
+     * 关联经济账户id
+     */
+    var funding: String? = null,
+
 
     /**
      * 玩家 狐币 领取记录
