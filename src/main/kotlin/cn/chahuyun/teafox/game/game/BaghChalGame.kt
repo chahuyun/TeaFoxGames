@@ -9,6 +9,12 @@ import cn.chahuyun.teafox.game.game.BaghChalGameCore.PosStatue.*
 import cn.chahuyun.teafox.game.util.MessageUtil.nextGroupMessageEvent
 import cn.chahuyun.teafox.game.util.MessageUtil.nextMessage
 import net.mamoe.mirai.contact.Group
+import java.awt.image.BufferedImage
+
+/**
+ * 图片缓存
+ * */
+val cacheImage:ArrayList<BufferedImage> = arrayListOf()
 
 /**
  * 行数
@@ -84,7 +90,7 @@ class BaghChalGameCore {
      * 游戏顺序
      * false:狼
      * true:羊*/
-    private var term: Boolean = true
+    private var term: Boolean = false
 
 
     /**
@@ -102,14 +108,15 @@ class BaghChalGameCore {
     fun fresh() {
         for (row in 0 until rowSize) {
             for (col in 0 until rowSize) {
-                vectorMap[row][col] = Empty
+                if ((row == (rowSize - 1)) || (col == (rowSize - 1))) {
+                    vectorMap[row][col] = Wolf
+                } else {
+                    vectorMap[row][col] = Empty
+                }
             }
         }
         vectorMap[0][0] = Wolf
-        vectorMap[0][rowSize - 1] = Wolf
-        vectorMap[rowSize - 1][0] = Wolf
-        vectorMap[rowSize - 1][rowSize - 1] = Wolf
-        term = true
+        term = false
         piecesLeft = 20
         piecesCaptured = 0
         winner = Empty
@@ -459,11 +466,6 @@ class BaghChalGame(override val group: Group,
 
     }
 
-    /**
-     * ->游戏初期阶段
-     * ->抢地主阶段
-     * ->决定地主，补牌
-     */
     override suspend fun initial() {
         group.sendMessage(g.toString())
         while (g.winner==Empty){
@@ -513,11 +515,21 @@ class BaghChalGame(override val group: Group,
         TODO("Not yet implemented")
     }
 
+    /**
+     * 将用户输入的四位数字字符串转化为坐标的四个数字
+     * */
     private fun getPosition(content:String):ArrayList<Int>{
         val a = ArrayList<Int>()
         for (i in content){
             a.add(i.toString().toInt())
         }
         return a
+    }
+
+    /**
+     * 把棋局用图片方式输出
+     * */
+    fun draw(): BufferedImage {
+        TODO("未实现")
     }
 }

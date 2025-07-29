@@ -14,7 +14,10 @@ import net.mamoe.mirai.message.data.At
 import net.mamoe.mirai.message.data.MessageChain
 import net.mamoe.mirai.message.data.PlainText
 import net.mamoe.mirai.message.data.buildMessageChain
+import java.awt.image.BufferedImage
+import java.io.File
 import java.util.concurrent.ConcurrentHashMap
+import javax.imageio.ImageIO
 import kotlin.collections.set
 import kotlin.math.floor
 import kotlin.math.roundToInt
@@ -117,6 +120,21 @@ object GameTableUtil {
             Result.success(finalBet to votes.toMap())
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    /**
+     * 读取指定路径图片返回为BufferedImage
+     * @param filePath 文件路径
+     * @return BufferedImage?
+     * */
+    fun readImageAsBufferedImage(filePath: String): BufferedImage? {
+        return try {
+            // 读取图片文件并转换为BufferedImage
+            ImageIO.read(File(filePath))
+        } catch (e: Exception) {
+            println("读取图片时发生错误: ${e.message}")
+            null
         }
     }
 }

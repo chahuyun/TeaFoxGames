@@ -88,4 +88,9 @@ object TeaFoxGames : KotlinPlugin(
     fun error(e: Throwable?) {
         logger.error(e)
     }
+
+    fun loadGameImage(){
+        TODO("加载图片到羊狼棋的缓存")
+    }
+
 }
